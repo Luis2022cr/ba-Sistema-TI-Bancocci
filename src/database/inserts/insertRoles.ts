@@ -3,7 +3,7 @@ import { Connection } from 'mysql2/promise';
 // Función para insertar roles solo si no existen
 export const insertRolesIfNotExists = async (connection: Connection) => {
   // Roles que queremos verificar e insertar
-  const rolesToCheck = ['admin', 'empleado', 'inactivo'];
+  const rolesToCheck = ['admin', 'empleado', 'inactivo', 'prestamos'];
 
   // Verificar cuántos de los roles ya existen
   const checkRolesSQL = `

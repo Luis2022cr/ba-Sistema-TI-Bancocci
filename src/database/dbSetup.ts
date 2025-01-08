@@ -2,6 +2,7 @@ import { insertAgencias } from "./inserts/insertAgencias";
 import { insertDepartamentos } from "./inserts/insertDepartamentos";
 import { insertDirectorios } from "./inserts/insertDirectorio";
 import { insertEstadoAgenciasIfNotExists } from "./inserts/insertEstadoAgencias";
+import { insertEstadoPrestamosIfNotExists } from "./inserts/insertEstadoPrestamos";
 import { insertEstadoIfNotExists } from "./inserts/insertEstados";
 import { insertEstadoUpsIfNotExists } from "./inserts/insertEstadoUps";
 import { insertMarcaIfNotExists } from "./inserts/insertMarcas";
@@ -55,6 +56,11 @@ const crearTablasEnLaBaseDeDatos = async () => {
             `CREATE TABLE IF NOT EXISTS estado_ups (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 nombre VARCHAR(50)
+            );`,
+
+            `CREATE TABLE IF NOT EXISTS estado_prestamos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nombre VARCHAR(255) NOT NULL
             );`,
 
             `CREATE TABLE IF NOT EXISTS tipo_inventario (
@@ -204,18 +210,51 @@ const crearTablasEnLaBaseDeDatos = async () => {
                 observaciones VARCHAR(500),
                 fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 fecha_modificacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        ); `,
-        `CREATE TABLE IF NOT EXISTS equipos_reparacion (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            reparacion_id INT NOT NULL,
-            descripcion_equipo VARCHAR(255),
-            inventario VARCHAR(100),
-            modelo_tipo VARCHAR(150),
-            serie VARCHAR(150),
-            pertenece VARCHAR(150),
-            destino VARCHAR(150),
-            FOREIGN KEY (reparacion_id) REFERENCES reparaciones(id) ON DELETE CASCADE
-        );`
+             ); `,
+
+            `CREATE TABLE IF NOT EXISTS equipos_reparacion (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                reparacion_id INT NOT NULL,
+                descripcion_equipo VARCHAR(255),
+                inventario VARCHAR(100),
+                modelo_tipo VARCHAR(150),
+                serie VARCHAR(150),
+                pertenece VARCHAR(150),
+                destino VARCHAR(150),
+                FOREIGN KEY (reparacion_id) REFERENCES reparaciones(id) ON DELETE CASCADE
+            );`,
+            
+            //Modulo de prestamos
+            `CREATE TABLE IF NOT EXISTS expediente_prestamos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                numero_cliente VARCHAR(50) NOT NULL,
+                nombre_cliente VARCHAR(255) NOT NULL,
+                estado_id INT NOT NULL,
+                agencia_id INT NOT NULL,
+                estante INT,
+                columna INT,
+                fila INT,
+                comentarios TEXT,
+                fecha_entrada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                fecha_salida DATETIME,
+                usuario_id INT,
+                responsable VARCHAR(255) NOT NULL,
+                FOREIGN KEY (estado_id) REFERENCES estado_prestamos(id),
+                FOREIGN KEY (agencia_id) REFERENCES agencias(id),
+                FOREIGN KEY (usuario_id) REFERENCES usuario(id)
+            );`,
+
+            `CREATE TABLE IF NOT EXISTS historial_prestamos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                expediente_id INT NOT NULL,
+                fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                tipo_evento ENUM('entrada', 'salida') NOT NULL,
+                comentarios TEXT,
+                usuario_id INT,
+                responsable VARCHAR(255),
+                FOREIGN KEY (expediente_id) REFERENCES expediente_prestamos(id),
+                FOREIGN KEY (usuario_id) REFERENCES usuario(id)
+            );`,
         ]; 
 
         for (const query of queries) {
@@ -232,6 +271,8 @@ const crearTablasEnLaBaseDeDatos = async () => {
         await insertEstadoIfNotExists(connection);
         //Insert estado_agencias
         await insertEstadoAgenciasIfNotExists(connection);
+         //Insert estado_agencias
+         await insertEstadoPrestamosIfNotExists(connection);
         //Insert estado_ups
         await insertEstadoUpsIfNotExists(connection);
         //Insert tipo_inventario
