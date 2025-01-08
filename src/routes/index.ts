@@ -20,8 +20,11 @@ import { getUpsMapa, createUpsMapa, deleteUpsMapa } from '../controllers/mapaCon
 import { actualizarHistorialCambioInventario, crearHistorialCambioInventario, obtenerHistorialCambioInventario } from '../controllers/historialCambioInventarioController';
 import { checkNotificacionesUps, getNotificacionesUps } from '../controllers/notificacionesController';
 import { crearControlEquipo, obtenerReparacionesConEquipos, obtenerReparacionPorId } from '../controllers/ControlEquipoController';
-import { importarInventario } from '../controllers/importExcelInventarioController';
+
 import multer from 'multer';
+import { importarInventario } from '../controllers/importExcelInventarioController';
+import { crearExpediente, getExpediente, getExpedientePorId } from '../controllers/expedientesController';
+import { getEstadoPrestamos } from '../controllers/estadoExpedientesController';
 
 const router: Router = Router();
 
@@ -135,8 +138,18 @@ router.post('/control_equipo_pdf', crearControlEquipo);
 router.get('/control_equipo', obtenerReparacionesConEquipos);  
 router.get('/control_equipo/:id', obtenerReparacionPorId);  
 
+// Ruta para obtener los expedientes de equipo
+router.post('/agregar_expedientes', authenticateJWT, crearExpediente );  
+router.get('/expedientes', getExpediente);  
+router.get('/expediente/:id', getExpedientePorId);  
+
+// Rutas de Estado Prestamos
+router.get('/estados_prestamos', getEstadoPrestamos);
+
+
 // Ruta para cargar archivo excel de inventario
 const upload = multer({ dest: 'uploads/' }); //
 router.post('/importar-inventario',authenticateJWT,upload.single('file'),importarInventario);
 
 export default router;
+ 

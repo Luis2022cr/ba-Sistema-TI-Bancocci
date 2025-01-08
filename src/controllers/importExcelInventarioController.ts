@@ -46,25 +46,25 @@ const obtenerOcrear = async (
   }
 };
 
-export const importarInventario = async (req: Request, res: Response) => {
+export const importarInventario = async (req: Request, res: Response): Promise<void> => {
   try {
     const filePath = req.file?.path;
 
     if (!filePath) {
-      return res.status(400).json({ error: 'No se subió ningún archivo.' });
+       res.status(400).json({ error: 'No se subió ningún archivo.' });
     }
 
     const userId = (req as any).user?.id;
     if (!userId) {
-      return res.status(401).json({ error: 'Usuario no autenticado.' });
+       res.status(401).json({ error: 'Usuario no autenticado.' });
     }
 
-    const workbook = xlsx.readFile(filePath);
+    const workbook = xlsx.readFile(filePath as string);
     const sheetName = workbook.SheetNames[0];
     const rawData: any[][] = xlsx.utils.sheet_to_json<any[]>(workbook.Sheets[sheetName], { header: 1 });
 
     if (rawData.length === 0) {
-      return res.status(400).json({ error: 'El archivo está vacío o no contiene encabezados.' });
+       res.status(400).json({ error: 'El archivo está vacío o no contiene encabezados.' });
     }
 
     // Verificar los encabezados
@@ -83,7 +83,7 @@ export const importarInventario = async (req: Request, res: Response) => {
 
     const missingHeaders = expectedHeaders.filter(header => !headers.includes(header));
     if (missingHeaders.length > 0) {
-      return res.status(400).json({
+       res.status(400).json({
         error: `Los siguientes encabezados faltan o están mal escritos (Debe tener el mismo nombre): ${missingHeaders.join(', ')}`
       });
     }
