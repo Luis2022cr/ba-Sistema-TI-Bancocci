@@ -83,15 +83,15 @@ export const obtenerExpedientePrestamosConHistorial = async (req: Request, res: 
                 ep.columna,
                 ep.fila,
                 ep.comentarios,
-                CONVERT_TZ(ep.fecha_entrada, '+00:00', '-06:00') AS "fecha_entrada", 
-                CONVERT_TZ(ep.fecha_salida, '+00:00', '-06:00') AS "fecha_salida", 
+                ep.fecha_entrada AS "fecha_entrada", 
+                ep.fecha_salida  AS "fecha_salida", 
                 ep.usuario_id,
                 ep.responsable,
                 e.nombre AS "estado",
                 ag.nombre AS "agencia",
                 u.nombre AS "usuario",
                 hp.id AS "historial_id",
-                CONVERT_TZ(hp.fecha_creacion, '+00:00', '-06:00') AS "historial_fecha",
+                hp.fecha_creacion AS "historial_fecha",
                 hp.tipo_evento,
                 hp.comentarios AS "historial_comentarios",
                 hp.usuario_id AS "historial_usuario_id",
@@ -138,9 +138,6 @@ export const obtenerExpedientePrestamosConHistorial = async (req: Request, res: 
                 responsable: row.historial_responsable,
             })).filter((historial: any) => historial.id !== null), // Excluir historiales nulos
         };
-
-        console.log("Expediente agrupado:", expediente); // Verifica el resultado agrupado
-
         res.status(200).json(expediente);
     } catch (error) {
         console.error("Error al obtener el expediente con su historial:", error);

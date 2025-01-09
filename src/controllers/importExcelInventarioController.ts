@@ -65,6 +65,7 @@ export const importarInventario = async (req: Request, res: Response): Promise<v
 
     if (rawData.length === 0) {
        res.status(400).json({ error: 'El archivo está vacío o no contiene encabezados.' });
+       return;
     }
 
     // Verificar los encabezados
@@ -86,6 +87,7 @@ export const importarInventario = async (req: Request, res: Response): Promise<v
        res.status(400).json({
         error: `Los siguientes encabezados faltan o están mal escritos (Debe tener el mismo nombre): ${missingHeaders.join(', ')}`
       });
+      return;
     }
 
     // Remover encabezados de los datos

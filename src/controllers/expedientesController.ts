@@ -30,7 +30,7 @@ export const getExpedientePorNumeroCliente = async (req: Request, res: Response)
         const [expediente_prestamos]: any = await pool.query(`
             SELECT 
                 ep.id, ep.numero_cliente, ep.nombre_cliente,  ep.agencia_id, ep.estante, 
-                ep.columna,  ep.fila, ep.comentarios, 
+                ep.columna,  ep.fila, ep.comentarios, e.nombre as estado_nombre,
                 ep.usuario_id, ep.responsable,
                 a.nombre as agencia, 
                 u.nombre as usuario
@@ -38,6 +38,7 @@ export const getExpedientePorNumeroCliente = async (req: Request, res: Response)
                 expediente_prestamos ep
             join agencias a on ep.agencia_id  = a.id 
             join usuario u  on ep.usuario_id  = u.id 
+            join estado_prestamos e on ep.estado_id = e.id
             where ep.numero_cliente = ?
         `, [clienteId]);
 

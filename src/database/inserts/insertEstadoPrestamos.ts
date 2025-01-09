@@ -3,7 +3,7 @@ import { Connection } from 'mysql2/promise';
 // Función para insertar los estados de UPS solo si no existen
 export const insertEstadoPrestamosIfNotExists = async (connection: Connection) => {
   // Nombres de los estados que queremos verificar e insertar
-  const estadosToCheck = ['Operativo', 'De baja'];
+  const estadosToCheck = ['Activo', 'De baja'];
 
   // Verificar cuántos de los estados ya existen
   const checkEstadosSQL = `
