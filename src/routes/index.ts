@@ -21,7 +21,7 @@ import { actualizarHistorialCambioInventario, crearHistorialCambioInventario, ob
 import { checkNotificacionesUps, getNotificacionesUps } from '../controllers/notificacionesController';
 import { crearControlEquipo, obtenerReparacionesConEquipos, obtenerReparacionPorId } from '../controllers/ControlEquipoController';
 import { importarInventario } from '../controllers/importExcelInventarioController';
-import { crearExpediente, getExpediente, getExpedientePorNumeroCliente } from '../controllers/expedientesController';
+import { actualizarExpediente, crearExpediente, getExpediente, getExpedientePorId, getExpedientePorNumeroCliente, getExpedientesDeBaja } from '../controllers/expedientesController';
 import { getEstadoPrestamos } from '../controllers/estadoExpedientesController';
 import { crearHistorialPrestamos, obtenerExpedientePrestamosConHistorial } from '../controllers/historialExpedienteController';
 
@@ -149,8 +149,11 @@ router.get('/historial_prestamos/:id',authenticateJWT , obtenerExpedientePrestam
 
 // Ruta para obtener los expedientes de equipo
 router.post('/agregar_expedientes', authenticateJWT, crearExpediente );  
-router.get('/expedientes', getExpediente);  
-router.get('/expediente/:id', getExpedientePorNumeroCliente);  
+router.put('/editar_expediente/:id', authenticateJWT, actualizarExpediente );  
+router.get('/expedientes', authenticateJWT, getExpediente);  
+router.get('/expediente/:clienteId', authenticateJWT, getExpedientePorNumeroCliente);  
+router.get('/expediente/:id', authenticateJWT, getExpedientePorId);  
+router.get('/expedientes_de_baja/', authenticateJWT, getExpedientesDeBaja);  
 
 // Rutas de Estado Prestamos
 router.get('/estados_prestamos', getEstadoPrestamos);
