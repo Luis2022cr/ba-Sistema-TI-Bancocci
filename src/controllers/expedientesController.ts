@@ -23,21 +23,21 @@ join usuario u  on ep.usuario_id  = u.id
     }
 };
 
-export const getExpedientePorId = async (req: Request, res: Response): Promise<void> => {
+export const getExpedientePorNumeroCliente = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
         const [expediente_prestamos]: any = await pool.query(`
-              SELECT 
-    ep.id, ep.numero_cliente, ep.nombre_cliente,  ep.agencia_id, ep.estante, 
-    ep.columna,  ep.fila, ep.comentarios, 
-    ep.usuario_id, ep.responsable,
-    a.nombre as Agencia,
-    u.nombre as Usuario
-FROM 
-    expediente_prestamos ep
-join agencias a on ep.agencia_id  = a.id 
-join usuario u  on ep.usuario_id  = u.id 
-where ep.id = ?
+            SELECT 
+                ep.id, ep.numero_cliente, ep.nombre_cliente,  ep.agencia_id, ep.estante, 
+                ep.columna,  ep.fila, ep.comentarios, 
+                ep.usuario_id, ep.responsable,
+                a.nombre as agencia, 
+                u.nombre as usuario
+            FROM 
+                expediente_prestamos ep
+            join agencias a on ep.agencia_id  = a.id 
+            join usuario u  on ep.usuario_id  = u.id 
+            where ep.numero_cliente = ?
         `, [id]);
 
         if (expediente_prestamos.length > 0) {
@@ -85,14 +85,13 @@ export const getExpedientesDeBaja = async (req: Request, res: Response): Promise
 export const crearExpediente = async (req: Request, res: Response): Promise<void> => {
     try {
         const { numero_cliente, nombre_cliente, estado_id, agencia_id, estante,
-            columna, fila, comentarios, responsable} = req.body;
+            columna, fila, comentarios, responsable } = req.body;
         const userId = (req as any).user?.id;
 
-        console.log("Expediente:" , req.body, userId)
 
         // Validar que todos los campos estén presentes
         if (!numero_cliente || !nombre_cliente || !estado_id || !agencia_id || !estante || !columna ||
-            !fila || !comentarios || !userId || !responsable) {
+            !fila || !userId || !responsable) {
             res.status(400).json({ error: 'Todos los campos son obligatorios' });
             return;
         }
@@ -112,7 +111,7 @@ export const crearExpediente = async (req: Request, res: Response): Promise<void
         const [estado]: any = await pool.query('SELECT id FROM estado_prestamos WHERE id = ?', [estado_id]);
         const [usuario]: any = await pool.query('SELECT id FROM usuario WHERE id = ?', [userId]);
 
-        if ( estado.length === 0 || usuario.length === 0 ) {
+        if (estado.length === 0 || usuario.length === 0) {
             res.status(400).json({ error: 'ID de estado o usuario no válido' });
             return;
         }
@@ -123,7 +122,7 @@ export const crearExpediente = async (req: Request, res: Response): Promise<void
             INSERT INTO expediente_prestamos (numero_cliente, nombre_cliente, estado_id, agencia_id, estante,
             columna, fila, comentarios, usuario_id, responsable)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [ numero_cliente, nombre_cliente, estado_id, agencia_id, estante,
+        `, [numero_cliente, nombre_cliente, estado_id, agencia_id, estante,
             columna, fila, comentarios, userId, responsable]);
 
         // Crear el log del expediente creado
