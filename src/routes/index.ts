@@ -20,11 +20,12 @@ import { getUpsMapa, createUpsMapa, deleteUpsMapa } from '../controllers/mapaCon
 import { actualizarHistorialCambioInventario, crearHistorialCambioInventario, obtenerHistorialCambioInventario } from '../controllers/historialCambioInventarioController';
 import { checkNotificacionesUps, getNotificacionesUps } from '../controllers/notificacionesController';
 import { crearControlEquipo, obtenerReparacionesConEquipos, obtenerReparacionPorId } from '../controllers/ControlEquipoController';
-
-import multer from 'multer';
 import { importarInventario } from '../controllers/importExcelInventarioController';
 import { crearExpediente, getExpediente, getExpedientePorId } from '../controllers/expedientesController';
 import { getEstadoPrestamos } from '../controllers/estadoExpedientesController';
+import { crearHistorialPrestamos, obtenerExpedientePrestamosConHistorial } from '../controllers/historialExpedienteController';
+
+import multer from 'multer';
 
 const router: Router = Router();
 
@@ -108,7 +109,7 @@ router.patch('/ups/:id/estado',authenticateJWT, eliminarUps);
 router.get('/calendario/ups', getcalendarUPS);
 
 //LOGS
-router.get('/logs', getLog);
+router.get('/logs',authenticateJWT, getLog);
 
 // Rutas para el CRUD de UPS Mapa
 router.get('/ups-mapa',authenticateJWT, getUpsMapa);
@@ -116,27 +117,35 @@ router.post('/ups-mapa',authenticateJWT, createUpsMapa);
 router.delete('/ups-mapa/:id',authenticateJWT, deleteUpsMapa);
 
 // Rutas de Inventarios
-router.get('/inventarios', getInventarios);
-router.get('/inventario_obsoleto', getInventarioPorEstadoOnsoleto);
-router.get('/inventarios/:id', getInventarioPorId);
-router.get('/inventario/:id', getInventarioPorIdConHistorial); 
+router.get('/inventarios',authenticateJWT, getInventarios);
+router.get('/inventario_obsoleto',authenticateJWT, getInventarioPorEstadoOnsoleto);
+router.get('/inventarios/:id',authenticateJWT, getInventarioPorId);
+router.get('/inventario/:id',authenticateJWT, getInventarioPorIdConHistorial); 
 router.post('/inventarios',authenticateJWT, crearInventario);
 router.put('/inventarios/:id',authenticateJWT, actualizarInventario);
-router.get('/inventarios/:tipo_inventario_id/historial', getInventariosPorTipoConHistorial);
+router.get('/inventarios/:tipo_inventario_id/historial',authenticateJWT, getInventariosPorTipoConHistorial);
 
 // Rutas para historial_cambio_inventario
-router.get('/historial_inventario', obtenerHistorialCambioInventario);  
-router.post('/historial_inventario', authenticateJWT, crearHistorialCambioInventario);    
+router.get('/historial_inventario',authenticateJWT, obtenerHistorialCambioInventario);  
+router.post('/historial_inventario',authenticateJWT, authenticateJWT, crearHistorialCambioInventario);    
 router.put('/historial_inventario/:id',authenticateJWT, actualizarHistorialCambioInventario); 
 
 // Ruta para obtener las notificaciones
-router.get('/notificaciones', getNotificacionesUps);  
-router.get('/notificaciones/check', checkNotificacionesUps);  
+router.get('/notificaciones',authenticateJWT, getNotificacionesUps);  
+router.get('/notificaciones/check',authenticateJWT, checkNotificacionesUps);  
 
 // Ruta para obtener las control de equipo
-router.post('/control_equipo_pdf', crearControlEquipo);  
-router.get('/control_equipo', obtenerReparacionesConEquipos);  
-router.get('/control_equipo/:id', obtenerReparacionPorId);  
+router.post('/control_equipo_pdf',authenticateJWT, crearControlEquipo);  
+router.get('/control_equipo',authenticateJWT, obtenerReparacionesConEquipos);  
+router.get('/control_equipo/:id',authenticateJWT, obtenerReparacionPorId);  
+
+// Ruta para cargar archivo excel de inventario
+const upload = multer({ dest: 'uploads/' }); //
+router.post('/importar-inventario',authenticateJWT,upload.single('file'),importarInventario);
+
+//  Rutas para Modulo de prestamos
+router.post('/historial_prestamos',authenticateJWT , crearHistorialPrestamos);  
+router.get('/historial_prestamos/:id',authenticateJWT , obtenerExpedientePrestamosConHistorial);  
 
 // Ruta para obtener los expedientes de equipo
 router.post('/agregar_expedientes', authenticateJWT, crearExpediente );  
@@ -145,11 +154,6 @@ router.get('/expediente/:id', getExpedientePorId);
 
 // Rutas de Estado Prestamos
 router.get('/estados_prestamos', getEstadoPrestamos);
-
-
-// Ruta para cargar archivo excel de inventario
-const upload = multer({ dest: 'uploads/' }); //
-router.post('/importar-inventario',authenticateJWT,upload.single('file'),importarInventario);
 
 export default router;
  
