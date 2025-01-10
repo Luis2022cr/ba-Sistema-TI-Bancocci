@@ -188,12 +188,11 @@ export const actualizarExpediente = async (req: Request, res: Response): Promise
         // Obtener el expediente actual antes de actualizar
         const [expedienteActual]: any = await pool.query(`
             SELECT numero_cliente, nombre_cliente, estado_id, agencia_id, estante,
-            columna, fila, comentarios, responsable
+            columna, fila, comentarios, responsable, fecha_salida
             FROM expediente_prestamos
-            WHERE numero_cliente = ?
-        `, [numero_cliente]);
+            WHERE id = ?
+        `, [id]);
 
-        
         if (expedienteActual.length === 0) {
             res.status(404).json({ error: 'Expediente no encontrado' });
             return;
@@ -207,7 +206,7 @@ export const actualizarExpediente = async (req: Request, res: Response): Promise
                 'SELECT id FROM expediente_prestamos WHERE numero_cliente = ? AND id != ?',
                 [numero_cliente, id]
             );
-        
+
             if (expedienteExistente.length > 0) {
                 res.status(400).json({ error: 'El número de cliente ya está registrado en otro expediente' });
                 return;
@@ -231,21 +230,34 @@ export const actualizarExpediente = async (req: Request, res: Response): Promise
             agencia: await obtenerNombre('agencias', agencia_id),
         };
 
+        // Si el estado cambia a 2, asignamos la fecha actual a fecha_salida
+        let fecha_salida = expedienteAnterior.fecha_salida;
+        if (estado_id === 2 && expedienteAnterior.estado_id !== 2) {
+            fecha_salida = new Date().toISOString().slice(0, 19).replace('T', ' '); // Fecha actual en formato MySQL
+        }
+
         // Actualizar el expediente
         const [result]: any = await pool.query(`
             UPDATE expediente_prestamos
-            SET numero_cliente = ?, nombre_cliente = ?, estado_id = ?, agencia_id = ?, estante = ?,
-            columna = ?, fila = ?, comentarios = ?, responsable = ?
+            SET 
+                numero_cliente = ?, 
+                nombre_cliente = ?, 
+                estado_id = ?, 
+                agencia_id = ?, 
+                estante = ?,
+                columna = ?, 
+                fila = ?, 
+                comentarios = ?, 
+                responsable = ?, 
+                fecha_salida = ?
             WHERE id = ?
         `, [numero_cliente, nombre_cliente, estado_id, agencia_id, estante,
-            columna, fila, comentarios, responsable,
-           userId, id]);
+            columna, fila, comentarios, responsable, fecha_salida, id]);
 
         if (result.affectedRows > 0) {
             // Comparar los campos modificados y generar el log de cambios
             let cambios: string[] = [];
 
-            // Función para registrar cambios
             const registrarCambio = (campo: string, valorAnterior: any, valorNuevo: any) => {
                 if (valorAnterior !== valorNuevo) {
                     cambios.push(`${campo}: '${valorAnterior}' -> '${valorNuevo}'`);
@@ -261,12 +273,11 @@ export const actualizarExpediente = async (req: Request, res: Response): Promise
             registrarCambio('Fila', expedienteAnterior.fila, fila);
             registrarCambio('Comentarios', expedienteAnterior.comentarios, comentarios);
             registrarCambio('Responsable', expedienteAnterior.responsable, responsable);
+            registrarCambio('Fecha Salida', expedienteAnterior.fecha_salida, fecha_salida);
 
-            // Generar la descripción y el cambio realizado para el log
             const descripcion = `Se actualizó el expediente con código: ${expedienteAnterior.numero_cliente}.`;
             const cambioRealizado = cambios.length > 0 ? cambios.join(', ') : 'Sin cambios detectados';
 
-            // Registrar el log si hubo cambios
             if (cambios.length > 0) {
                 await pool.query(`
                     INSERT INTO logs (descripcion, cambio_realizado, usuario_id)
