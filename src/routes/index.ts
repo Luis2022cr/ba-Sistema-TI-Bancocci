@@ -152,7 +152,7 @@ router.post('/agregar_expedientes', authenticateJWT, crearExpediente );
 router.put('/editar_expediente/:id', authenticateJWT, actualizarExpediente );  
 router.get('/expedientes', authenticateJWT, getExpediente);  
 router.get('/expediente/:clienteId', authenticateJWT, getExpedientePorNumeroCliente);  
-router.get('/expediente/:id', authenticateJWT, getExpedientePorId);  
+router.get('/expedientes/:id', authenticateJWT, getExpedientePorId);  
 router.get('/expedientes_de_baja/', authenticateJWT, getExpedientesDeBaja);  
 
 // Rutas de Estado Prestamos
