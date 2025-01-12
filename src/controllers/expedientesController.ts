@@ -145,7 +145,7 @@ export const crearExpediente = async (req: Request, res: Response): Promise<void
             return;
         }
 
-        
+
         // Crear el inventario
         await pool.query(`
             INSERT INTO expediente_prestamos (numero_cliente, nombre_cliente, estado_id, agencia_id, estante,
@@ -180,7 +180,7 @@ export const actualizarExpediente = async (req: Request, res: Response): Promise
 
         // Validar que todos los campos estén presentes
         if (!numero_cliente || !nombre_cliente || !estado_id || !agencia_id || !estante || !columna
-             || !fila || !comentarios || !responsable) {
+            || !fila || !comentarios || !responsable) {
             res.status(400).json({ error: 'Todos los campos son obligatorios' });
             return;
         }
@@ -291,5 +291,73 @@ export const actualizarExpediente = async (req: Request, res: Response): Promise
         }
     } catch (error) {
         res.status(500).json({ error: 'Error al actualizar el expediente' });
+    }
+};
+
+
+// Actualiza resado para dar de baja o volver a activo
+export const actualizarEstadoExpediente = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id_expediente, nuevo_estado, comentario, entregadoA } = req.body;
+        const userId = (req as any).user?.id;
+
+        // Validar que todos los campos estén presentes
+        if (!id_expediente || !nuevo_estado || !comentario || !userId || !entregadoA) {
+            res.status(400).json({ error: 'Todos los campos (id_expediente, nuevo_estado, comentario) son obligatorios' });
+            return;
+        }
+
+
+        // Validar que el nuevo estado sea válido (1 = operativo, 2 = de baja)
+        if (![1, 2].includes(nuevo_estado)) {
+            res.status(400).json({ error: 'El nuevo estado debe ser 1 (operativo) o 2 (de baja)' });
+            return;
+        }
+        //sacar el tipo de evento para el historial
+        const tipo_evento = nuevo_estado === 1 ? 'entrada' : 'salida';
+
+        // Verificar si el expediente existe
+        const [expediente]: any = await pool.query(
+            'SELECT * FROM expediente_prestamos WHERE id = ?',
+            [id_expediente]
+        );
+
+        if (expediente.length === 0) {
+            res.status(404).json({ error: 'Expediente no encontrado' });
+            return;
+        }
+
+        //insert para la tabla del historial
+        await pool.query(
+            `INSERT INTO historial_prestamos (expediente_id, tipo_evento, comentarios, usuario_id, responsable) 
+             VALUES (?, ?, ?, ?, ?)`,
+            [id_expediente, tipo_evento, comentario, userId, entregadoA]
+        );
+
+        // Preparar datos para actualizar en expediente_prestamos
+        const fechaCampo =
+            tipo_evento === "entrada" ? "fecha_entrada" : "fecha_salida";
+
+        // Actualizar el estado y el comentario del expediente
+        await pool.query(
+            `UPDATE expediente_prestamos SET estado_id = ?, comentarios = ?, 
+                    responsable = ?, ${fechaCampo} = CURRENT_TIMESTAMP 
+            WHERE id = ?`,
+            [nuevo_estado, comentario, entregadoA, id_expediente]
+        );
+
+        // Crear el log del cambio de estado
+        const descripcion = `Se actualizó el estado del expediente con ID: ${id_expediente}.`;
+        const cambioRealizado = `Estado cambiado a ${nuevo_estado === 1 ? 'Operativo' : 'De Baja'}. Comentario: ${comentario}`;
+
+        await pool.query(
+            `INSERT INTO logs (descripcion, cambio_realizado, usuario_id)
+            VALUES (?, ?, ?)`,
+            [descripcion, cambioRealizado, userId]
+        );
+
+        res.status(200).json({ message: 'Estado del expediente actualizado exitosamente' });
+    } catch (error) {
+        res.status(500).json({ error: 'Error al actualizar el estado del expediente' });
     }
 };
