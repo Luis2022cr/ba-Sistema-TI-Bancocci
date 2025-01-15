@@ -111,6 +111,31 @@ Where ep.estado_id = 2
     }
 };
 
+export const getExpedienteNoDeVuelto = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const [expediente_prestamos]: any = await pool.query(`
+            SELECT
+                ep.id, ep.numero_cliente, ep.nombre_cliente, ep.estado_id, ep.agencia_id, ep.estante,
+                ep.columna, ep.fila, ep.comentarios, ep.fecha_entrada, ep.fecha_salida,
+                ep.usuario_id, ep.responsable,
+                esp.nombre AS estado,
+                a.nombre AS agencia,
+                u.nombre AS usuario
+            FROM
+                expediente_prestamos ep
+            JOIN estado_prestamos esp ON ep.estado_id = esp.id
+            JOIN agencias a ON ep.agencia_id = a.id
+            JOIN usuario u ON ep.usuario_id = u.id
+            WHERE
+                ep.estado_id = 1 AND ep.fecha_salida > ep.fecha_entrada
+        `);
+        res.status(200).json(expediente_prestamos);
+    } catch (error) {
+        res.status(500).json({ error: 'Error al obtener los expedientes' });
+    }
+};
+
+
 export const crearExpediente = async (req: Request, res: Response): Promise<void> => {
     try {
         const { numero_cliente, nombre_cliente, estado_id, agencia_id, estante,
@@ -188,7 +213,7 @@ export const actualizarExpediente = async (req: Request, res: Response): Promise
         // Obtener el expediente actual antes de actualizar
         const [expedienteActual]: any = await pool.query(`
             SELECT numero_cliente, nombre_cliente, estado_id, agencia_id, estante,
-            columna, fila, comentarios, responsable, fecha_salida
+            columna, fila, comentarios, responsable, fecha_entrada, fecha_salida
             FROM expediente_prestamos
             WHERE id = ?
         `, [id]);
@@ -230,9 +255,13 @@ export const actualizarExpediente = async (req: Request, res: Response): Promise
             agencia: await obtenerNombre('agencias', agencia_id),
         };
 
-        // Si el estado cambia a 2, asignamos la fecha actual a fecha_salida
+        // Actualizar la fecha según el estado
+        let fecha_entrada = expedienteAnterior.fecha_entrada;
         let fecha_salida = expedienteAnterior.fecha_salida;
-        if (estado_id === 2 && expedienteAnterior.estado_id !== 2) {
+
+        if (estado_id === 1 && expedienteAnterior.estado_id !== 1) {
+            fecha_entrada = new Date().toISOString().slice(0, 19).replace('T', ' '); // Fecha actual en formato MySQL
+        } else if (estado_id === 2 && expedienteAnterior.estado_id !== 2) {
             fecha_salida = new Date().toISOString().slice(0, 19).replace('T', ' '); // Fecha actual en formato MySQL
         }
 
@@ -249,10 +278,11 @@ export const actualizarExpediente = async (req: Request, res: Response): Promise
                 fila = ?, 
                 comentarios = ?, 
                 responsable = ?, 
+                fecha_entrada = ?,
                 fecha_salida = ?
             WHERE id = ?
         `, [numero_cliente, nombre_cliente, estado_id, agencia_id, estante,
-            columna, fila, comentarios, responsable, fecha_salida, id]);
+            columna, fila, comentarios, responsable, fecha_entrada, fecha_salida, id]);
 
         if (result.affectedRows > 0) {
             // Comparar los campos modificados y generar el log de cambios
@@ -273,6 +303,7 @@ export const actualizarExpediente = async (req: Request, res: Response): Promise
             registrarCambio('Fila', expedienteAnterior.fila, fila);
             registrarCambio('Comentarios', expedienteAnterior.comentarios, comentarios);
             registrarCambio('Responsable', expedienteAnterior.responsable, responsable);
+            registrarCambio('Fecha Entrada', expedienteAnterior.fecha_entrada, fecha_entrada);
             registrarCambio('Fecha Salida', expedienteAnterior.fecha_salida, fecha_salida);
 
             const descripcion = `Se actualizó el expediente con código: ${expedienteAnterior.numero_cliente}.`;
@@ -293,6 +324,7 @@ export const actualizarExpediente = async (req: Request, res: Response): Promise
         res.status(500).json({ error: 'Error al actualizar el expediente' });
     }
 };
+
 
 
 // Actualiza resado para dar de baja o volver a activo
