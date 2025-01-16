@@ -4,19 +4,20 @@ import pool from '../database/mysql';
 
 export const getExpediente = async (req: Request, res: Response): Promise<void> => {
     try {
-        const [expediente_prestamos]: any = await pool.query(` select
- ep.id, ep.numero_cliente, ep.nombre_cliente,  ep.estado_id,  ep.agencia_id, ep.estante, 
-    ep.columna,  ep.fila, ep.comentarios, ep.fecha_entrada, ep.fecha_salida, 
-    ep.usuario_id, ep.responsable,
-    esp.nombre  as estado ,
-    a.nombre as agencia,
-    u.nombre as usuario
-FROM 
-    expediente_prestamos ep
-join estado_prestamos esp on ep.estado_id = esp.id 
-join agencias a on ep.agencia_id  = a.id 
-join usuario u  on ep.usuario_id  = u.id 
-Where ep.estado_id = 1
+        const [expediente_prestamos]: any = await pool.query(` 
+            select
+            ep.id, ep.numero_cliente, ep.nombre_cliente,  ep.estado_id,  ep.agencia_id, ep.estante, 
+                ep.columna,  ep.fila, ep.comentarios, ep.fecha_entrada, ep.fecha_salida, 
+                ep.usuario_id, ep.responsable,
+                esp.nombre  as estado ,
+                a.nombre as agencia,
+                u.nombre as usuario
+            FROM 
+                expediente_prestamos ep
+            join estado_prestamos esp on ep.estado_id = esp.id 
+            join agencias a on ep.agencia_id  = a.id 
+            join usuario u  on ep.usuario_id  = u.id 
+            Where ep.estado_id = 1
 `);
         res.status(200).json(expediente_prestamos);
     } catch (error) {
@@ -52,7 +53,6 @@ export const getExpedientePorNumeroCliente = async (req: Request, res: Response)
     }
 };
 
-
 export const getExpedientePorId = async (req: Request, res: Response): Promise<void> => {
     try {
         const { id } = req.params;
@@ -80,7 +80,6 @@ export const getExpedientePorId = async (req: Request, res: Response): Promise<v
         res.status(500).json({ error: 'Error al obtener el expediente' });
     }
 };
-
 
 export const getExpedientesDeBaja = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -134,7 +133,6 @@ export const getExpedienteNoDeVuelto = async (req: Request, res: Response): Prom
         res.status(500).json({ error: 'Error al obtener los expedientes' });
     }
 };
-
 
 export const crearExpediente = async (req: Request, res: Response): Promise<void> => {
     try {

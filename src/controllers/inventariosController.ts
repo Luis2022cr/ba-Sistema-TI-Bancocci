@@ -118,23 +118,23 @@ export const getInventarioPorIdConHistorial = async (req: Request, res: Response
         const { id } = req.params;
 
         const [inventario]: any = await pool.query(`
-       SELECT i.*,
-       ti.nombre AS "tipo_inventario", 
-       m.nombre AS "marca", 
-       mo.nombre AS "modelo", 
-       ag_origen.nombre AS "agencia_origen", 
-       ag_actual.nombre AS "agencia_actual", 
-       e.nombre AS "estado", 
-       u.nombre AS "usuario"
-FROM inventario i
-JOIN tipo_inventario ti ON i.tipo_inventario_id = ti.id
-JOIN marca m ON i.marca_id = m.id
-JOIN modelo mo ON i.modelo_id = mo.id  
-JOIN agencias ag_origen ON i.agencias_id_origen = ag_origen.id
-JOIN agencias ag_actual ON i.agencias_id_actual = ag_actual.id
-JOIN estado e ON i.estado_id = e.id
-JOIN usuario u ON i.usuario_id = u.id
-WHERE i.id = ?;
+        SELECT i.*,
+            ti.nombre AS "tipo_inventario", 
+            m.nombre AS "marca", 
+            mo.nombre AS "modelo", 
+            ag_origen.nombre AS "agencia_origen", 
+            ag_actual.nombre AS "agencia_actual", 
+            e.nombre AS "estado", 
+            u.nombre AS "usuario"
+        FROM inventario i
+        JOIN tipo_inventario ti ON i.tipo_inventario_id = ti.id
+        JOIN marca m ON i.marca_id = m.id
+        JOIN modelo mo ON i.modelo_id = mo.id  
+        JOIN agencias ag_origen ON i.agencias_id_origen = ag_origen.id
+        JOIN agencias ag_actual ON i.agencias_id_actual = ag_actual.id
+        JOIN estado e ON i.estado_id = e.id
+        JOIN usuario u ON i.usuario_id = u.id
+        WHERE i.id = ?;
         `, [id]);
 
         if (inventario.length === 0) {
@@ -254,65 +254,114 @@ export const getInventariosPorTipoConHistorial = async (req: Request, res: Respo
     }
 };
 
-
 // Crear un nuevo inventario
 export const crearInventario = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { codigo, serie, tipo_inventario_id, marca_id, modelo_id, agencias_id_origen, agencias_id_actual, estado_id, comentarios,fecha_creacion } = req.body;
+        const {
+            codigo,
+            serie,
+            tipo_inventario_id,
+            marca_id,
+            modelo_id,
+            agencias_id_origen,
+            agencias_id_actual,
+            estado_id,
+            comentarios,
+            fecha_creacion,
+        } = req.body;
+
         const userId = (req as any).user?.id;
 
-        // Validar que todos los campos estén presentes
-        if (!codigo || !serie || !tipo_inventario_id || !marca_id || !modelo_id ||
-            !agencias_id_origen || !agencias_id_actual || !estado_id || !userId) {
-            res.status(400).json({ error: 'Todos los campos son obligatorios' });
+        // Validar que todos los campos obligatorios estén presentes
+        if (
+            !serie ||
+            !tipo_inventario_id ||
+            !marca_id ||
+            !modelo_id ||
+            !agencias_id_origen ||
+            !agencias_id_actual ||
+            !estado_id ||
+            !userId
+        ) {
+            res.status(400).json({ error: 'Todos los campos obligatorios deben ser proporcionados' });
             return;
         }
-        // Verificar si el código o la serie ya existen
-        const [inventarioExistente]: any = await pool.query(
-            'SELECT id FROM inventario WHERE codigo = ? OR serie = ?',
-            [codigo, serie]
-        );
+
+        // Asignar valor a n_inventario
+        const n_inventario = codigo || 'N / A';
+
+        // Verificar si la serie ya existe o si el código no es 'N / A' y ya existe
+        // Verificar si la serie ya existe o si el código no es 'N / A' y ya existe
+        let inventarioExistente: any[];
+        if (n_inventario !== 'N / A') {
+            const [result]: [any[], any] = await pool.query(
+                'SELECT id FROM inventario WHERE codigo = ? OR serie = ?',
+                [n_inventario, serie]
+            );
+            inventarioExistente = result;
+        } else {
+            const [result]: [any[], any] = await pool.query('SELECT id FROM inventario WHERE serie = ?', [serie]);
+            inventarioExistente = result;
+        }
 
         if (inventarioExistente.length > 0) {
-            res.status(400).json({ error: 'El Numero de inventario o la serie ya están registrados' });
+            res.status(400).json({ error: 'El código o la serie ya están registrados' });
             return;
         }
 
-
-        // Verificar si los IDs de las agencias, estado, tipo y usuario existen
+        // Verificar si los IDs de las agencias, estado, tipo, marca, modelo y usuario existen
         const [tipoInventario]: any = await pool.query('SELECT id FROM tipo_inventario WHERE id = ?', [tipo_inventario_id]);
         const [modelo]: any = await pool.query('SELECT id FROM modelo WHERE id = ?', [modelo_id]);
         const [marca]: any = await pool.query('SELECT id FROM marca WHERE id = ?', [marca_id]);
         const [estado]: any = await pool.query('SELECT id FROM estado WHERE id = ?', [estado_id]);
         const [usuario]: any = await pool.query('SELECT id FROM usuario WHERE id = ?', [userId]);
 
-        if (tipoInventario.length === 0 || marca.length === 0 || estado.length === 0 || usuario.length === 0 || modelo.lengt === 0) {
+        if (tipoInventario.length === 0 || marca.length === 0 || estado.length === 0 || usuario.length === 0 || modelo.length === 0) {
             res.status(400).json({ error: 'ID de tipo, marca, modelo, estado o usuario no válido' });
             return;
         }
 
         // Crear el inventario
-        await pool.query(`
+        await pool.query(
+            `
             INSERT INTO inventario (codigo, serie, tipo_inventario_id, 
             marca_id, modelo_id, agencias_id_origen, agencias_id_actual, estado_id, usuario_id, comentarios, fecha_creacion)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [codigo, serie, tipo_inventario_id, marca_id, modelo_id, agencias_id_origen, agencias_id_actual, estado_id, userId, comentarios, fecha_creacion]);
+        `,
+            [
+                n_inventario,
+                serie,
+                tipo_inventario_id,
+                marca_id,
+                modelo_id,
+                agencias_id_origen,
+                agencias_id_actual,
+                estado_id,
+                userId,
+                comentarios,
+                fecha_creacion,
+            ]
+        );
 
         // Crear el log del inventario creado
-        const descripcion = `Se creó un nuevo inventario con código: ${codigo}, serie: ${serie}.`;
-        const cambioRealizado = `Código: ${codigo}, Serie: ${serie}, Tipo Inventario ID: ${tipo_inventario_id}, Marca ID: ${marca_id}, Modelo ID: ${modelo_id}, Agencia Origen ID: ${agencias_id_origen}, Agencia Actual ID: ${agencias_id_actual}, Estado ID: ${estado_id}, Fecha de creacion: ${fecha_creacion}
-        `;
+        const descripcion = `Se creó un nuevo inventario con código: ${n_inventario}, serie: ${serie}.`;
+        const cambioRealizado = `Código: ${n_inventario}, Serie: ${serie}, Tipo Inventario ID: ${tipo_inventario_id}, Marca ID: ${marca_id}, Modelo ID: ${modelo_id}, Agencia Origen ID: ${agencias_id_origen}, Agencia Actual ID: ${agencias_id_actual}, Estado ID: ${estado_id}, Fecha de creación: ${fecha_creacion}`;
 
-        await pool.query(`
+        await pool.query(
+            `
             INSERT INTO logs (descripcion, cambio_realizado, usuario_id)
             VALUES (?, ?, ?)
-        `, [descripcion, cambioRealizado, userId]);
+        `,
+            [descripcion, cambioRealizado, userId]
+        );
 
         res.status(201).json({ message: 'Inventario creado exitosamente' });
     } catch (error) {
+        console.error('Error al crear el inventario:', error);
         res.status(500).json({ error: 'Error al crear el inventario' });
     }
 };
+
 
 export const actualizarInventario = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -327,15 +376,24 @@ export const actualizarInventario = async (req: Request, res: Response): Promise
         }
 
         // Verificar si el inventario ya existe con el mismo código o serie
-        const [inventarioExistente]: any = await pool.query(
-            'SELECT id FROM inventario WHERE (codigo = ? OR serie = ?) AND id != ?',
-            [codigo, serie, id]
-        );
+        let inventarioExistente: any[];
+        if (codigo !== 'N / A') {
+            const [result]: [any[], any] = await pool.query(
+                'SELECT id FROM inventario WHERE (codigo = ? OR serie = ?) AND id != ?',
+                [codigo, serie, id]
+            );
+
+            inventarioExistente = result;
+        } else {
+            const [result]: [any[], any] = await pool.query('SELECT id FROM inventario WHERE serie = ? AND id != ?', [serie, id]);
+            inventarioExistente = result;
+        }
 
         if (inventarioExistente.length > 0) {
-            res.status(400).json({ error: 'El código o la serie ya están registrados en otro inventario' });
+            res.status(400).json({ error: 'El código o la serie ya están registrados' });
             return;
         }
+
 
         // Obtener el inventario actual antes de actualizar
         const [inventarioActual]: any = await pool.query(`
